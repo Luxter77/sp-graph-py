@@ -497,14 +497,60 @@ def export_graph(graph: nx.Graph, output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     suffix = output_path.suffix.lower()
     log(f"Exporting graph to {output_path} (format: {suffix})...")
+
     if suffix == ".graphml":
-        nx.write_graphml(graph, output_path)
+        nx.write_graphml(graph, output_path, named_key_ids=True)
     elif suffix == ".gexf":
         nx.write_gexf(graph, output_path)
     elif suffix == ".gml":
         nx.write_gml(graph, output_path)
+    elif suffix == ".json":
+        nodes_json = []
+        for node_id, n_data in graph.nodes(data=True):
+            nodes_json.append(
+                {
+                    "id": str(node_id),
+                    "label": str(n_data.get("label", node_id)),
+                    "metadata": {
+                        "stem": str(n_data.get("stem", "")),
+                        "variants": str(n_data.get("variants", "")),
+                        "total_cooccurrence_degree": int(
+                            n_data.get("total_cooccurrence_degree", 0)
+                        ),
+                        "skeleton_degree": int(n_data.get("skeleton_degree", 0)),
+                    },
+                }
+            )
+
+        edges_json = []
+        for idx, (u, v, e_data) in enumerate(graph.edges(data=True)):
+            edges_json.append(
+                {
+                    "id": str(idx),
+                    "source": str(u),
+                    "target": str(v),
+                    "metadata": {
+                        "weight": float(e_data.get("weight", 0.0)),
+                        "pull_weight": float(e_data.get("pull_weight", 0.0)),
+                        "ppmi": float(e_data.get("ppmi", 0.0)),
+                        "raw_count": int(e_data.get("raw_count", 0)),
+                        "base_weight": float(e_data.get("base_weight", 0.0)),
+                    },
+                }
+            )
+
+        payload = {
+            "graph": {
+                "directed": False,
+                "nodes": nodes_json,
+                "edges": edges_json,
+            }
+        }
+        output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     else:
-        raise ValueError(f"Unsupported file extension: {suffix}. Use .graphml, .gexf, or .gml")
+        raise ValueError(
+            f"Unsupported file extension: {suffix}. Use .graphml, .gexf, .gml, or .json"
+        )
     log(f"Export complete: {output_path.resolve()}")
 
 

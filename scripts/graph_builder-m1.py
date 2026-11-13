@@ -424,7 +424,8 @@ def build_ppmi_graph(
     relabel_mapping: dict[str, str] = {}
     used_names: Counter[str] = Counter()
 
-    for stem in stem_graph.nodes():
+    for raw_stem in stem_graph.nodes():
+        stem = str(raw_stem)
         word = canonical_map.get(stem, stem)
         used_names[word] += 1
         node_id = word if used_names[word] == 1 else f"{word}_{stem}"

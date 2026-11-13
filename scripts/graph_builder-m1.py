@@ -105,6 +105,16 @@ def load_nltk_background_counts(
     return neg_counts, total_neg_tokens
 
 
+FRONTMATTER_RE = re.compile(
+    r"\A(?:\ufeff)?[ \t]*\r?\n*(?:---|\+\+\+)[ \t]*\r?\n.*?\r?\n(?:---|\+\+\+|\.\.\.)[ \t]*(?:\r?\n|\Z)",
+    re.DOTALL,
+)
+FENCED_CODE_RE = re.compile(r"```.*?```", re.DOTALL)
+INLINE_CODE_RE = re.compile(r"`[^`]*`")
+URL_RE = re.compile(r"https?://\S+")
+WORD_RE = re.compile(r"[a-zA-Z]{2,}")
+
+
 def extract_and_stem_tokens(
     file_path: Path,
     stemmer: PorterStemmer,
@@ -112,10 +122,14 @@ def extract_and_stem_tokens(
     stem_surface_counts: dict[str, Counter[str]] | None = None,
 ) -> list[str]:
     text = file_path.read_text(encoding="utf-8", errors="ignore")
-    text = re.sub(r"```.*?```", " ", text, flags=re.DOTALL)
-    text = re.sub(r"`[^`]*`", " ", text)
-    text = re.sub(r"https?://\S+", " ", text)
-    words = re.findall(r"[a-zA-Z]{2,}", text.lower())
+    # Strip YAML (---) or TOML (+++) frontmatter at the top of the file
+    text = FRONTMATTER_RE.sub(" ", text, count=1)
+    # Strip fenced and inline code blocks
+    text = FENCED_CODE_RE.sub(" ", text)
+    text = INLINE_CODE_RE.sub(" ", text)
+    # Strip URLs
+    text = URL_RE.sub(" ", text)
+    words = WORD_RE.findall(text.lower())
 
     tokens: list[str] = []
     for w in words:

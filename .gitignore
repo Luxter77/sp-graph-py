@@ -254,3 +254,6 @@ __marimo__/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+### Project stuff
+.nltk_data
